@@ -159,10 +159,21 @@ def get_ai_response(user_input, df):
     
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4-mini",
             messages=[
                 {"role": "system", "content": f"""Du bist ein präziser Analyst für UX/UI Issues.
-                Wichtige Regeln für deine Antworten:
+                Du kannst auch Graphen erstellen. Wenn der User nach einem Graphen fragt,
+                antworte im folgenden Format:
+                
+                GRAPH:
+                type: [bar/line/scatter/pie]
+                data: [Beschreibung der benötigten Daten]
+                x: [x-Achse]
+                y: [y-Achse]
+                title: [Titel]
+                color: [optional: Farbvariable]
+                
+                Wichtige Regeln für normale Antworten:
                 - Maximal 3 Stichpunkte
                 - Jeder Stichpunkt maximal 1 Zeile
                 - Nur konkrete Zahlen und Fakten aus den Daten
@@ -180,12 +191,69 @@ def get_ai_response(user_input, df):
                 {data_summary}"""},
                 {"role": "user", "content": user_input}
             ],
-            temperature=0.3,  # Reduziert für konsistentere, präzisere Antworten
-            max_tokens=150    # Begrenzt die Antwortlänge
+            temperature=0.3,
+            max_tokens=150
         )
-        return response.choices[0].message.content
+        
+        ai_response = response.choices[0].message.content
+        
+        # Check if response contains graph request
+        if "GRAPH:" in ai_response:
+            create_and_display_graph(ai_response, df)
+            return "Graph wurde erstellt! 📊"
+        
+        return ai_response
     except Exception as e:
         return f"Fehler: {str(e)}"
+
+def create_and_display_graph(graph_spec, df):
+    # Parse graph specification
+    lines = graph_spec.split('\n')
+    graph_config = {}
+    for line in lines:
+        if ':' in line:
+            key, value = line.split(':', 1)
+            graph_config[key.strip().lower()] = value.strip()
+    
+    # Create graph based on type
+    if graph_config.get('type') == 'bar':
+        fig = px.bar(
+            df,
+            x=graph_config.get('x'),
+            y=graph_config.get('y'),
+            title=graph_config.get('title'),
+            color=graph_config.get('color') if 'color' in graph_config else None,
+            color_discrete_sequence=['#d32f2f']
+        )
+    elif graph_config.get('type') == 'scatter':
+        fig = px.scatter(
+            df,
+            x=graph_config.get('x'),
+            y=graph_config.get('y'),
+            title=graph_config.get('title'),
+            color=graph_config.get('color') if 'color' in graph_config else None
+        )
+    elif graph_config.get('type') == 'pie':
+        fig = px.pie(
+            df,
+            values=graph_config.get('y'),
+            names=graph_config.get('x'),
+            title=graph_config.get('title')
+        )
+    else:
+        return
+    
+    # Update layout
+    fig.update_layout(
+        height=400,
+        showlegend=True if graph_config.get('type') == 'pie' else False
+    )
+    
+    # Add to session state for display
+    if 'generated_graphs' not in st.session_state:
+        st.session_state.generated_graphs = []
+    
+    st.session_state.generated_graphs.append(fig)
 
 with chat_col1:
     user_input = st.text_input("Stelle eine Frage zu den Daten:", key="user_input")
@@ -246,6 +314,12 @@ for idx, message in enumerate(st.session_state.chat_history):
         if st.button("🗑️", key=f"delete_message_{idx}"):
             st.session_state.chat_history.pop(idx)
             st.rerun()
+
+# Display generated graphs
+if 'generated_graphs' in st.session_state and st.session_state.generated_graphs:
+    st.subheader("📊 Generierte Graphen")
+    for fig in st.session_state.generated_graphs:
+        st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
 
@@ -317,92 +391,6 @@ st.markdown("""
 
 # Improved Data Analysis Section
 st.subheader("📊 Datenanalyse")
-
-# First Row - Platform Impact and Count Analysis
-col1, col2 = st.columns(2)
-
-with col1:
-    # Total negative impact score by platform
-    platform_impact = df[df['Impact Score'] < 0].groupby('Platform')['Impact Score'].sum().sort_values()
-    fig_impact = px.bar(
-        x=platform_impact.values,
-        y=platform_impact.index,
-        orientation='h',
-        title="Gesamter negativer Impact Score nach Platform",
-        color=platform_impact.values,
-        color_continuous_scale='Reds_r'
-    )
-    fig_impact.update_layout(
-        xaxis_title="Gesamter Impact Score",
-        yaxis_title="Platform",
-        height=400,
-        yaxis={'categoryorder':'total ascending'}
-    )
-    st.plotly_chart(fig_impact, use_container_width=True)
-
-with col2:
-    # Count of negative issues by platform
-    platform_counts = df[df['Impact Score'] < 0].groupby('Platform').size().sort_values()
-    fig_counts = px.bar(
-        x=platform_counts.values,
-        y=platform_counts.index,
-        orientation='h',
-        title="Anzahl negativer Issues nach Platform",
-        color=platform_counts.values,
-        color_continuous_scale='Reds'
-    )
-    fig_counts.update_layout(
-        xaxis_title="Anzahl Issues",
-        yaxis_title="Platform",
-        height=400,
-        yaxis={'categoryorder':'total ascending'}
-    )
-    st.plotly_chart(fig_counts, use_container_width=True)
-
-# Second Row - Detailed Status Analysis by Platform
-# Create categories based on Impact Score
-def get_status(score):
-    if score <= -3:
-        return 'High Violated'
-    elif score <= -2:
-        return 'Low Violated'
-    elif score <= -1:
-        return 'Neutral'
-    elif score <= 0:
-        return 'Low Adhered'
-    else:
-        return 'High Adhered'
-
-df['Status'] = df['Impact Score'].apply(get_status)
-
-# Create status distribution by platform
-status_by_platform = pd.crosstab(df['Platform'], df['Status'])
-status_order = ['High Violated', 'Low Violated', 'Neutral', 'Low Adhered', 'High Adhered']
-status_colors = {
-    'High Violated': '#d32f2f',
-    'Low Violated': '#f44336',
-    'Neutral': '#ffd700',
-    'Low Adhered': '#4caf50',
-    'High Adhered': '#2e7d32'
-}
-
-fig_status = px.bar(
-    status_by_platform,
-    barmode='group',
-    title="Verteilung der Status nach Platform",
-    color_discrete_map=status_colors
-)
-
-fig_status.update_layout(
-    xaxis_title="Platform",
-    yaxis_title="Anzahl",
-    height=500,
-    legend_title="Status",
-    showlegend=True,
-    xaxis={'categoryorder':'total descending'}
-)
-
-st.plotly_chart(fig_status, use_container_width=True)
 
 # Detailed Data View
 st.subheader("Detaillierte Datenansicht")
