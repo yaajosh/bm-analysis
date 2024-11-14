@@ -1,5 +1,6 @@
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 import uuid
 from openai import OpenAI
@@ -381,3 +382,113 @@ st.write(
     styled_df.to_html(escape=False),
     unsafe_allow_html=True
 ) 
+
+# Charts
+st.subheader("📊 Datenanalyse")
+tab1, tab2, tab3 = st.tabs(["Impact Analyse", "Plattform Übersicht", "Topic Details"])
+
+with tab1:
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Severity nach Impact Score
+        severity_impact = df.groupby('Severity')['Impact Score'].mean().sort_values()
+        fig_impact = px.bar(
+            severity_impact,
+            orientation='h',
+            color=severity_impact.index,
+            color_discrete_map={
+                'Kritisch': '#f44336',
+                'Schwerwiegend': '#ff9800',
+                'Moderat': '#ffc107'
+            },
+            title="Durchschnittlicher Impact Score nach Schweregrad"
+        )
+        fig_impact.update_layout(
+            showlegend=False,
+            xaxis_title="Impact Score",
+            yaxis_title="",
+            height=300
+        )
+        st.plotly_chart(fig_impact, use_container_width=True)
+    
+    with col2:
+        # Top 5 schwerste Probleme
+        top_issues = df.nsmallest(5, 'Impact Score')[['Title', 'Impact Score', 'Severity']]
+        fig_top = go.Figure(data=[
+            go.Bar(
+                x=top_issues['Impact Score'],
+                y=top_issues['Title'],
+                orientation='h',
+                marker_color=['#f44336' if x == 'Kritisch' else '#ff9800' if x == 'Schwerwiegend' else '#ffc107' 
+                             for x in top_issues['Severity']]
+            )
+        ])
+        fig_top.update_layout(
+            title="Top 5 kritischste Probleme",
+            height=300,
+            yaxis={'categoryorder':'total ascending'}
+        )
+        st.plotly_chart(fig_top, use_container_width=True)
+
+with tab2:
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Platform Verteilung mit Severity
+        platform_severity = pd.crosstab(df['Platform'], df['Severity'])
+        fig_platform = px.bar(
+            platform_severity,
+            barmode='stack',
+            color_discrete_map={
+                'Kritisch': '#f44336',
+                'Schwerwiegend': '#ff9800',
+                'Moderat': '#ffc107'
+            },
+            title="Probleme nach Platform und Schweregrad"
+        )
+        fig_platform.update_layout(height=400)
+        st.plotly_chart(fig_platform, use_container_width=True)
+    
+    with col2:
+        # Average Impact pro Platform
+        platform_impact = df.groupby('Platform')['Impact Score'].mean().sort_values()
+        fig_platform_impact = px.bar(
+            platform_impact,
+            color=platform_impact.index,
+            title="Durchschnittlicher Impact Score nach Platform"
+        )
+        fig_platform_impact.update_layout(
+            showlegend=False,
+            yaxis_title="Impact Score",
+            height=400
+        )
+        st.plotly_chart(fig_platform_impact, use_container_width=True)
+
+with tab3:
+    # Heatmap Topics vs Severity
+    topic_severity = pd.crosstab(df['Topic'], df['Severity'])
+    fig_heatmap = px.imshow(
+        topic_severity,
+        color_continuous_scale=['#ffc107', '#ff9800', '#f44336'],
+        aspect="auto",
+        title="Topic vs Severity Heatmap"
+    )
+    fig_heatmap.update_layout(height=500)
+    st.plotly_chart(fig_heatmap, use_container_width=True)
+
+    # Top Topics nach Impact
+    topic_impact = df.groupby('Topic')['Impact Score'].agg(['mean', 'count']).sort_values('mean')
+    fig_topic = px.scatter(
+        topic_impact,
+        x='mean',
+        y='count',
+        title="Topics nach Impact Score und Anzahl",
+        text=topic_impact.index
+    )
+    fig_topic.update_layout(
+        xaxis_title="Durchschnittlicher Impact Score",
+        yaxis_title="Anzahl Issues",
+        height=400
+    )
+    st.plotly_chart(fig_topic, use_container_width=True) 
