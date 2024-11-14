@@ -155,11 +155,14 @@ def get_ai_response(user_input, df):
     data_summary = f"""
     Daten:
     {df.to_string()}
+    
+    Verfügbare Spalten:
+    {', '.join(df.columns.tolist())}
     """
     
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4-mini",
             messages=[
                 {"role": "system", "content": f"""Du bist ein präziser Analyst für UX/UI Issues.
                 Du kannst auch Graphen erstellen. Wenn der User nach einem Graphen fragt,
@@ -168,10 +171,16 @@ def get_ai_response(user_input, df):
                 GRAPH:
                 type: [bar/line/scatter/pie]
                 data: [Beschreibung der benötigten Daten]
-                x: [x-Achse]
-                y: [y-Achse]
+                x: [x-Achse - MUSS exakt einem dieser Spaltennamen entsprechen: {', '.join(df.columns.tolist())}]
+                y: [y-Achse - MUSS exakt einem dieser Spaltennamen entsprechen: {', '.join(df.columns.tolist())}]
                 title: [Titel]
-                color: [optional: Farbvariable]
+                color: [optional: MUSS exakt einem dieser Spaltennamen entsprechen: {', '.join(df.columns.tolist())}]
+                
+                WICHTIG: Verwende exakt die englischen Spaltennamen aus den Daten:
+                - Platform (nicht Plattform)
+                - Topic (nicht Thema)
+                - Severity (nicht Schweregrad)
+                - Impact Score (nicht Impact)
                 
                 Wichtige Regeln für normale Antworten:
                 - Maximal 3 Stichpunkte
@@ -180,13 +189,6 @@ def get_ai_response(user_input, df):
                 - Keine Erklärungen oder Interpretationen
                 - Antworte auf Deutsch
                 - Verwende Aufzählungszeichen (•)
-                
-                Datenkontext:
-                - Title: Problembeschreibung
-                - Platform: Plattform des Problems
-                - Topic: Themenbereich
-                - Severity: Kritisch/Schwerwiegend/Moderat
-                - Impact Score: Numerischer Impact (negativ)
                 
                 {data_summary}"""},
                 {"role": "user", "content": user_input}
