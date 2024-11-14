@@ -318,93 +318,91 @@ st.markdown("""
 # Improved Data Analysis Section
 st.subheader("📊 Datenanalyse")
 
-# First Row - Severity Distribution and Impact Timeline
+# First Row - Platform Impact and Count Analysis
 col1, col2 = st.columns(2)
 
 with col1:
-    # Improved Severity Distribution
-    severity_counts = df['Severity'].value_counts()
-    fig_severity = px.pie(
-        values=severity_counts.values,
-        names=severity_counts.index,
-        title="Verteilung der Schweregrade",
-        color=severity_counts.index,
-        color_discrete_map={
-            'Kritisch': '#f44336',
-            'Schwerwiegend': '#ff9800',
-            'Moderat': '#ffc107'
-        }
+    # Total negative impact score by platform
+    platform_impact = df[df['Impact Score'] < 0].groupby('Platform')['Impact Score'].sum().sort_values()
+    fig_impact = px.bar(
+        x=platform_impact.values,
+        y=platform_impact.index,
+        orientation='h',
+        title="Gesamter negativer Impact Score nach Platform",
+        color=platform_impact.values,
+        color_continuous_scale='Reds_r'
     )
-    fig_severity.update_traces(textposition='inside', textinfo='percent+label')
-    fig_severity.update_layout(height=400)
-    st.plotly_chart(fig_severity, use_container_width=True)
+    fig_impact.update_layout(
+        xaxis_title="Gesamter Impact Score",
+        yaxis_title="Platform",
+        height=400,
+        yaxis={'categoryorder':'total ascending'}
+    )
+    st.plotly_chart(fig_impact, use_container_width=True)
 
 with col2:
-    # Topic Impact Analysis
-    topic_severity = pd.crosstab(df['Topic'], df['Severity'])
-    fig_topic = px.bar(
-        topic_severity,
-        barmode='stack',
-        title="Issues nach Themenbereich und Schweregrad",
-        color_discrete_map={
-            'Kritisch': '#f44336',
-            'Schwerwiegend': '#ff9800',
-            'Moderat': '#ffc107'
-        }
+    # Count of negative issues by platform
+    platform_counts = df[df['Impact Score'] < 0].groupby('Platform').size().sort_values()
+    fig_counts = px.bar(
+        x=platform_counts.values,
+        y=platform_counts.index,
+        orientation='h',
+        title="Anzahl negativer Issues nach Platform",
+        color=platform_counts.values,
+        color_continuous_scale='Reds'
     )
-    fig_topic.update_layout(
-        xaxis_title="Themenbereich",
-        yaxis_title="Anzahl Issues",
+    fig_counts.update_layout(
+        xaxis_title="Anzahl Issues",
+        yaxis_title="Platform",
         height=400,
-        xaxis={'categoryorder':'total descending'}
+        yaxis={'categoryorder':'total ascending'}
     )
-    st.plotly_chart(fig_topic, use_container_width=True)
+    st.plotly_chart(fig_counts, use_container_width=True)
 
-# Second Row - Platform Analysis and Top Issues
-col3, col4 = st.columns(2)
+# Second Row - Detailed Status Analysis by Platform
+# Create categories based on Impact Score
+def get_status(score):
+    if score <= -3:
+        return 'High Violated'
+    elif score <= -2:
+        return 'Low Violated'
+    elif score <= -1:
+        return 'Neutral'
+    elif score <= 0:
+        return 'Low Adhered'
+    else:
+        return 'High Adhered'
 
-with col3:
-    # Platform Analysis with Average Impact
-    platform_avg_impact = df.groupby('Platform').agg({
-        'Impact Score': ['mean', 'count']
-    }).reset_index()
-    platform_avg_impact.columns = ['Platform', 'Avg_Impact', 'Count']
-    
-    fig_platform = px.scatter(
-        platform_avg_impact,
-        x='Platform',
-        y='Avg_Impact',
-        size='Count',
-        title="Platforms: Impact Score vs. Anzahl Issues",
-        color='Avg_Impact',
-        color_continuous_scale='RdYlBu'
-    )
-    fig_platform.update_layout(
-        xaxis_title="Platform",
-        yaxis_title="Durchschnittlicher Impact Score",
-        height=400
-    )
-    st.plotly_chart(fig_platform, use_container_width=True)
+df['Status'] = df['Impact Score'].apply(get_status)
 
-with col4:
-    # Top 5 Most Critical Issues
-    top_issues = df.nsmallest(5, 'Impact Score')[['Title', 'Impact Score', 'Severity']]
-    fig_top = go.Figure(data=[
-        go.Bar(
-            x=top_issues['Impact Score'],
-            y=top_issues['Title'],
-            orientation='h',
-            marker_color=['#f44336' if x == 'Kritisch' else '#ff9800' if x == 'Schwerwiegend' else '#ffc107' 
-                         for x in top_issues['Severity']]
-        )
-    ])
-    fig_top.update_layout(
-        title="Top 5 kritischste Issues",
-        height=400,
-        yaxis={'categoryorder':'total ascending'},
-        xaxis_title="Impact Score"
-    )
-    st.plotly_chart(fig_top, use_container_width=True)
+# Create status distribution by platform
+status_by_platform = pd.crosstab(df['Platform'], df['Status'])
+status_order = ['High Violated', 'Low Violated', 'Neutral', 'Low Adhered', 'High Adhered']
+status_colors = {
+    'High Violated': '#d32f2f',
+    'Low Violated': '#f44336',
+    'Neutral': '#ffd700',
+    'Low Adhered': '#4caf50',
+    'High Adhered': '#2e7d32'
+}
+
+fig_status = px.bar(
+    status_by_platform,
+    barmode='group',
+    title="Verteilung der Status nach Platform",
+    color_discrete_map=status_colors
+)
+
+fig_status.update_layout(
+    xaxis_title="Platform",
+    yaxis_title="Anzahl",
+    height=500,
+    legend_title="Status",
+    showlegend=True,
+    xaxis={'categoryorder':'total descending'}
+)
+
+st.plotly_chart(fig_status, use_container_width=True)
 
 # Detailed Data View
 st.subheader("Detaillierte Datenansicht")
