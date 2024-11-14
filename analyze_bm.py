@@ -439,3 +439,89 @@ st.write(
     styled_df.to_html(escape=False),
     unsafe_allow_html=True
 ) 
+
+# Assessment Scorecard
+st.subheader("Assessment Scorecard")
+
+# Prepare data
+def create_scorecard_fig(df):
+    # Create figure
+    fig = go.Figure()
+    
+    # Add performance ranges background
+    categories = ['POOR', 'MEDIOCRE', 'DECENT', 'GOOD', 'PERFECT']
+    colors = ['#ffebee', '#fff3e0', '#fff8e1', '#f1f8e9', '#e8f5e9']
+    x_ranges = [-100, -60, -20, 20, 60, 100]
+    
+    for i in range(len(categories)):
+        fig.add_shape(
+            type="rect",
+            x0=x_ranges[i],
+            x1=x_ranges[i+1],
+            y0=0,
+            y1=len(df),
+            fillcolor=colors[i],
+            opacity=0.2,
+            layer="below",
+            line_width=0,
+        )
+
+    # Add performance bars
+    fig.add_trace(go.Bar(
+        x=df['Impact Score'],
+        y=df['Title'],
+        orientation='h',
+        marker_color=['#d32f2f' if x <= -60 else  # Poor
+                     '#ff9800' if x <= -20 else    # Mediocre
+                     '#ffd700' if x <= 20 else     # Decent
+                     '#4caf50' if x <= 60 else     # Good
+                     '#2e7d32'                     # Perfect
+                     for x in df['Impact Score']],
+        text=df['Impact Score'].round(1),
+        textposition='inside',
+        textfont=dict(color='white'),
+        width=0.6
+    ))
+
+    # Update layout
+    fig.update_layout(
+        height=len(df) * 30,  # Dynamic height based on number of items
+        margin=dict(l=200, r=50, t=30, b=50),
+        xaxis=dict(
+            title="Performance Score",
+            range=[-100, 100],
+            zeroline=True,
+            zerolinecolor='black',
+            zerolinewidth=0.5,
+            showgrid=True,
+            gridcolor='rgba(0,0,0,0.1)',
+        ),
+        yaxis=dict(
+            title="",
+            autorange="reversed",
+        ),
+        showlegend=False,
+        plot_bgcolor='white',
+    )
+
+    # Add category labels at the top
+    for i, category in enumerate(categories):
+        fig.add_annotation(
+            x=(x_ranges[i] + x_ranges[i+1])/2,
+            y=1.05,
+            text=category,
+            showarrow=False,
+            yref="paper",
+            font=dict(size=10)
+        )
+
+    return fig
+
+# Create hierarchical structure
+scorecard_data = df.copy()
+scorecard_data['Guidelines'] = scorecard_data['Platform'].astype(str) + ' - ' + \
+                              scorecard_data['Topic'].astype(str)
+
+# Create and display figure
+fig_scorecard = create_scorecard_fig(scorecard_data)
+st.plotly_chart(fig_scorecard, use_container_width=True) 
