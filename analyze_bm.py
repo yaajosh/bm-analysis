@@ -114,7 +114,7 @@ st.markdown("""
 # Daten einlesen
 @st.cache_data
 def load_data():
-    return pd.read_csv('pirnar-industry-20241114T221116.csv')
+    return pd.read_csv('ux_data.csv')
 
 df = load_data()
 
@@ -130,7 +130,7 @@ def get_severity(score):
 df['Severity'] = df['Impact Score'].apply(get_severity)
 
 # Header
-st.title("Morning, Pirnar")
+st.title("UX Analysis Dashboard")
 
 # Chat Interface
 st.markdown("---")
