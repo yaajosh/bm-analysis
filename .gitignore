@@ -2,4 +2,4 @@
 __pycache__/
 *.pyc
 .DS_Store
-pirnar-industry-20241114T221116.csv
+.streamlit/secrets.toml
