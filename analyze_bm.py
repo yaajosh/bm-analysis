@@ -249,32 +249,88 @@ for idx, message in enumerate(st.session_state.chat_history):
 
 st.markdown("---")
 
-# Main Stats in columns
-col1, col2, col3 = st.columns(3)
+# Datenanalyse direkt nach dem Chat
+st.subheader("📊 Datenanalyse")
+
+# Erste Reihe
+col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown(f"""
-        <div class="stat-card">
-            <h2 style="color: #7C4DFF">{len(df)}</h2>
-            <p>Identifizierte Probleme</p>
-        </div>
-    """, unsafe_allow_html=True)
+    # Severity nach Impact Score
+    severity_impact = df.groupby('Severity')['Impact Score'].mean().sort_values()
+    fig_impact = px.bar(
+        severity_impact,
+        orientation='h',
+        color=severity_impact.index,
+        color_discrete_map={
+            'Kritisch': '#f44336',
+            'Schwerwiegend': '#ff9800',
+            'Moderat': '#ffc107'
+        },
+        title="Durchschnittlicher Impact Score nach Schweregrad"
+    )
+    fig_impact.update_layout(
+        showlegend=False,
+        xaxis_title="Impact Score",
+        yaxis_title="",
+        height=300
+    )
+    st.plotly_chart(fig_impact, use_container_width=True)
 
 with col2:
-    st.markdown(f"""
-        <div class="stat-card">
-            <h2 style="color: #f44336">{len(df[df['Severity'] == 'Kritisch'])}</h2>
-            <p>Kritische Issues</p>
-        </div>
-    """, unsafe_allow_html=True)
+    # Top 5 schwerste Probleme
+    top_issues = df.nsmallest(5, 'Impact Score')[['Title', 'Impact Score', 'Severity']]
+    fig_top = go.Figure(data=[
+        go.Bar(
+            x=top_issues['Impact Score'],
+            y=top_issues['Title'],
+            orientation='h',
+            marker_color=['#f44336' if x == 'Kritisch' else '#ff9800' if x == 'Schwerwiegend' else '#ffc107' 
+                         for x in top_issues['Severity']]
+        )
+    ])
+    fig_top.update_layout(
+        title="Top 5 kritischste Probleme",
+        height=300,
+        yaxis={'categoryorder':'total ascending'}
+    )
+    st.plotly_chart(fig_top, use_container_width=True)
+
+# Zweite Reihe
+col3, col4 = st.columns(2)
 
 with col3:
-    st.markdown(f"""
-        <div class="stat-card">
-            <h2 style="color: #4CAF50">{len(df['Topic'].unique())}</h2>
-            <p>Betroffene Bereiche</p>
-        </div>
-    """, unsafe_allow_html=True)
+    # Platform Verteilung mit Severity
+    platform_severity = pd.crosstab(df['Platform'], df['Severity'])
+    fig_platform = px.bar(
+        platform_severity,
+        barmode='stack',
+        color_discrete_map={
+            'Kritisch': '#f44336',
+            'Schwerwiegend': '#ff9800',
+            'Moderat': '#ffc107'
+        },
+        title="Probleme nach Platform und Schweregrad"
+    )
+    fig_platform.update_layout(height=400)
+    st.plotly_chart(fig_platform, use_container_width=True)
+
+with col4:
+    # Average Impact pro Platform
+    platform_impact = df.groupby('Platform')['Impact Score'].mean().sort_values()
+    fig_platform_impact = px.bar(
+        platform_impact,
+        color=platform_impact.index,
+        title="Durchschnittlicher Impact Score nach Platform"
+    )
+    fig_platform_impact.update_layout(
+        showlegend=False,
+        yaxis_title="Impact Score",
+        height=400
+    )
+    st.plotly_chart(fig_platform_impact, use_container_width=True)
+
+st.markdown("---")
 
 # KI-Zusammenfassung
 most_common_severity = df['Severity'].mode()[0]
@@ -300,52 +356,6 @@ st.markdown("""
     df[df['Topic'] == most_impacted_topic]['Impact Score'].sum(),
     most_impacted_topic
 ), unsafe_allow_html=True)
-
-# Charts
-col1, col2 = st.columns(2)
-
-with col1:
-    st.subheader("Problem Verteilung")
-    fig_pie = px.pie(
-        values=df['Platform'].value_counts(),
-        names=df['Platform'].value_counts().index,
-        hole=0.3,
-        color_discrete_sequence=['#7C4DFF', '#2196F3']
-    )
-    fig_pie.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font={'color': '#ffffff', 'size': 14},
-        title_font=dict(size=20),
-        height=500,
-        margin=dict(l=50, r=50, t=50, b=50)
-    )
-    st.plotly_chart(fig_pie, use_container_width=True)
-
-with col2:
-    st.subheader("Schweregrad Verteilung")
-    severity_counts = df['Severity'].value_counts().reset_index()
-    severity_counts.columns = ['Severity', 'Anzahl']
-    fig_bar = px.bar(
-        severity_counts,
-        x='Severity',
-        y='Anzahl',
-        color='Severity',
-        color_discrete_map={
-            'Kritisch': '#f44336',
-            'Schwerwiegend': '#ff9800',
-            'Moderat': '#ffc107'
-        }
-    )
-    fig_bar.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font={'color': '#ffffff', 'size': 14},
-        showlegend=False,
-        height=500,
-        title_font=dict(size=20)
-    )
-    st.plotly_chart(fig_bar, use_container_width=True)
 
 # Detailed Data View
 st.subheader("Detaillierte Datenansicht")
@@ -382,113 +392,3 @@ st.write(
     styled_df.to_html(escape=False),
     unsafe_allow_html=True
 ) 
-
-# Charts
-st.subheader("📊 Datenanalyse")
-tab1, tab2, tab3 = st.tabs(["Impact Analyse", "Plattform Übersicht", "Topic Details"])
-
-with tab1:
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Severity nach Impact Score
-        severity_impact = df.groupby('Severity')['Impact Score'].mean().sort_values()
-        fig_impact = px.bar(
-            severity_impact,
-            orientation='h',
-            color=severity_impact.index,
-            color_discrete_map={
-                'Kritisch': '#f44336',
-                'Schwerwiegend': '#ff9800',
-                'Moderat': '#ffc107'
-            },
-            title="Durchschnittlicher Impact Score nach Schweregrad"
-        )
-        fig_impact.update_layout(
-            showlegend=False,
-            xaxis_title="Impact Score",
-            yaxis_title="",
-            height=300
-        )
-        st.plotly_chart(fig_impact, use_container_width=True)
-    
-    with col2:
-        # Top 5 schwerste Probleme
-        top_issues = df.nsmallest(5, 'Impact Score')[['Title', 'Impact Score', 'Severity']]
-        fig_top = go.Figure(data=[
-            go.Bar(
-                x=top_issues['Impact Score'],
-                y=top_issues['Title'],
-                orientation='h',
-                marker_color=['#f44336' if x == 'Kritisch' else '#ff9800' if x == 'Schwerwiegend' else '#ffc107' 
-                             for x in top_issues['Severity']]
-            )
-        ])
-        fig_top.update_layout(
-            title="Top 5 kritischste Probleme",
-            height=300,
-            yaxis={'categoryorder':'total ascending'}
-        )
-        st.plotly_chart(fig_top, use_container_width=True)
-
-with tab2:
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Platform Verteilung mit Severity
-        platform_severity = pd.crosstab(df['Platform'], df['Severity'])
-        fig_platform = px.bar(
-            platform_severity,
-            barmode='stack',
-            color_discrete_map={
-                'Kritisch': '#f44336',
-                'Schwerwiegend': '#ff9800',
-                'Moderat': '#ffc107'
-            },
-            title="Probleme nach Platform und Schweregrad"
-        )
-        fig_platform.update_layout(height=400)
-        st.plotly_chart(fig_platform, use_container_width=True)
-    
-    with col2:
-        # Average Impact pro Platform
-        platform_impact = df.groupby('Platform')['Impact Score'].mean().sort_values()
-        fig_platform_impact = px.bar(
-            platform_impact,
-            color=platform_impact.index,
-            title="Durchschnittlicher Impact Score nach Platform"
-        )
-        fig_platform_impact.update_layout(
-            showlegend=False,
-            yaxis_title="Impact Score",
-            height=400
-        )
-        st.plotly_chart(fig_platform_impact, use_container_width=True)
-
-with tab3:
-    # Heatmap Topics vs Severity
-    topic_severity = pd.crosstab(df['Topic'], df['Severity'])
-    fig_heatmap = px.imshow(
-        topic_severity,
-        color_continuous_scale=['#ffc107', '#ff9800', '#f44336'],
-        aspect="auto",
-        title="Topic vs Severity Heatmap"
-    )
-    fig_heatmap.update_layout(height=500)
-    st.plotly_chart(fig_heatmap, use_container_width=True)
-
-    # Top Topics nach Impact
-    topic_impact = df.groupby('Topic')['Impact Score'].agg(['mean', 'count']).sort_values('mean')
-    fig_topic = px.scatter(
-        topic_impact,
-        x='mean',
-        y='count',
-        title="Topics nach Impact Score und Anzahl",
-        text=topic_impact.index
-    )
-    fig_topic.update_layout(
-        xaxis_title="Durchschnittlicher Impact Score",
-        yaxis_title="Anzahl Issues",
-        height=400
-    )
-    st.plotly_chart(fig_topic, use_container_width=True) 
