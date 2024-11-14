@@ -1,0 +1,5 @@
+.env
+__pycache__/
+*.pyc
+.DS_Store
+pirnar-industry-20241114T221116.csv
