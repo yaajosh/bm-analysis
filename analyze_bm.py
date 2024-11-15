@@ -378,6 +378,15 @@ graph_col1, graph_col2 = st.columns(2)
 with graph_col1:
     # Platform Analysis
     platform_judgement = df.groupby(['Platform', 'Judgement']).size().reset_index(name='count')
+    # Filter out 'Not applicable' and set custom order
+    platform_judgement = platform_judgement[platform_judgement['Judgement'] != 'Not applicable']
+    judgement_order = ['Violated High', 'Violated Low', 'Adhered Low', 'Adhered High']
+    platform_judgement['Judgement'] = pd.Categorical(
+        platform_judgement['Judgement'], 
+        categories=judgement_order, 
+        ordered=True
+    )
+    
     fig_platform = px.bar(
         platform_judgement,
         x='Platform',
@@ -387,10 +396,10 @@ with graph_col1:
         color_discrete_map={
             'Violated High': '#f44336',
             'Violated Low': '#ff9800',
-            'Adhered High': '#4CAF50',
             'Adhered Low': '#2196F3',
-            'Not applicable': '#666666'
+            'Adhered High': '#4CAF50'
         },
+        category_orders={'Judgement': judgement_order},
         barmode='group'
     )
     fig_platform.update_layout(
@@ -401,24 +410,38 @@ with graph_col1:
     st.plotly_chart(fig_platform, use_container_width=True)
 
 with graph_col2:
-    # Topic Analysis (top 5 topics)
+    # Add topic selection
+    all_topics = sorted(df['Topic'].unique().tolist())
+    selected_topics = st.multiselect(
+        'Wähle die Topics aus:',
+        options=all_topics,
+        default=df['Topic'].value_counts().nlargest(5).index.tolist(),
+        key='topic_selector'
+    )
+    
+    # Update topic analysis with selected topics
     topic_judgement = df.groupby(['Topic', 'Judgement']).size().reset_index(name='count')
-    top_topics = df['Topic'].value_counts().nlargest(5).index
-    topic_judgement = topic_judgement[topic_judgement['Topic'].isin(top_topics)]
+    topic_judgement = topic_judgement[topic_judgement['Judgement'] != 'Not applicable']
+    topic_judgement = topic_judgement[topic_judgement['Topic'].isin(selected_topics)]
+    topic_judgement['Judgement'] = pd.Categorical(
+        topic_judgement['Judgement'], 
+        categories=judgement_order, 
+        ordered=True
+    )
     
     fig_topic = px.bar(
         topic_judgement,
         x='Topic',
         y='count',
         color='Judgement',
-        title='Judgement Verteilung nach Top 5 Topics',
+        title='Judgement Verteilung nach ausgewählten Topics',
         color_discrete_map={
             'Violated High': '#f44336',
             'Violated Low': '#ff9800',
-            'Adhered High': '#4CAF50',
             'Adhered Low': '#2196F3',
-            'Not applicable': '#666666'
+            'Adhered High': '#4CAF50'
         },
+        category_orders={'Judgement': judgement_order},
         barmode='group'
     )
     fig_topic.update_layout(
