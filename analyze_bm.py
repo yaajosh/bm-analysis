@@ -557,47 +557,89 @@ with impact_col2:
 st.markdown("---")
 st.subheader("🧠 Mentales Modell der UX-Analyse")
 
-# Create mental model using mermaid
-mental_model = """
-graph TD
-    classDef violated fill:#f44336,color:white;
-    classDef violatedLow fill:#ff9800,color:white;
-    classDef adheredLow fill:#2196F3,color:white;
-    classDef adheredHigh fill:#4CAF50,color:white;
+# Custom HTML/CSS for visual model
+visual_model = """
+<style>
+    .model-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        padding: 20px;
+        background: #1e1e1e;
+        border-radius: 10px;
+    }
+    .level {
+        display: flex;
+        justify-content: space-around;
+        gap: 10px;
+    }
+    .box {
+        padding: 15px 25px;
+        border-radius: 8px;
+        text-align: center;
+        color: white;
+        min-width: 150px;
+    }
+    .main { background: #2c2c2c; }
+    .platform { background: #424242; }
+    .category { background: #424242; }
+    .rating { background: #424242; }
+    .violated { background: #f44336; }
+    .violated-low { background: #ff9800; }
+    .adhered-low { background: #2196F3; }
+    .adhered-high { background: #4CAF50; }
+    .impact { background: #666666; }
+    .arrow-container {
+        display: flex;
+        justify-content: center;
+        color: #666;
+        font-size: 20px;
+    }
+</style>
+
+<div class="model-container">
+    <div class="level">
+        <div class="box main">UX Issues</div>
+    </div>
     
-    A[UX Issues] --> B[Platform]
-    A --> C[Kategorien]
-    A --> D[Bewertung]
+    <div class="arrow-container">↓</div>
     
-    B --> B1[Desktop]
-    B --> B2[Mobile Web]
+    <div class="level">
+        <div class="box platform">Desktop</div>
+        <div class="box platform">Mobile Web</div>
+    </div>
     
-    C --> C1[Homepage & Navigation]
-    C --> C2[Suche]
-    C --> C3[Produkt-Seiten]
-    C --> C4[User Reviews]
+    <div class="arrow-container">↓</div>
     
-    D --> E[Judgement]
-    D --> F[Impact]
+    <div class="level">
+        <div class="box category">Homepage & Navigation</div>
+        <div class="box category">Suche</div>
+        <div class="box category">Produkt-Seiten</div>
+        <div class="box category">User Reviews</div>
+    </div>
     
-    E --> E1[Violated High]:::violated
-    E --> E2[Violated Low]:::violatedLow
-    E --> E3[Adhered Low]:::adheredLow
-    E --> E4[Adhered High]:::adheredHigh
+    <div class="arrow-container">↓</div>
     
-    F --> F1[Kritisch < -3]
-    F --> F2[Schwerwiegend < -2]
-    F --> F3[Moderat > -2]
+    <div class="level">
+        <div class="box violated">Violated High</div>
+        <div class="box violated-low">Violated Low</div>
+        <div class="box adhered-low">Adhered Low</div>
+        <div class="box adhered-high">Adhered High</div>
+    </div>
+    
+    <div class="arrow-container">↓</div>
+    
+    <div class="level">
+        <div class="box impact">Kritisch < -3</div>
+        <div class="box impact">Schwerwiegend < -2</div>
+        <div class="box impact">Moderat > -2</div>
+    </div>
+</div>
 """
 
-# Using streamlit-mermaid to render the diagram
-st.markdown(f"""
-    ```mermaid
-    {mental_model}
-    ```
-""")
+st.markdown(visual_model, unsafe_allow_html=True)
 
-# Add explanation
+# Add explanation box below
 st.markdown("""
     <div class="summary-box">
         <h4>Erklärung des Modells:</h4>
