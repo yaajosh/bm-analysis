@@ -374,7 +374,7 @@ st.subheader("📊 Datenanalyse")
 
 # Detailed Data View
 st.subheader("Detaillierte Datenansicht")
-columns_to_display = ['Title', 'Platform', 'Topic', 'Severity', 'Impact Score', 'Review Tool Link']
+columns_to_display = ['Title', 'Platform', 'Topic', 'Severity', 'Judgement', 'Impact Score', 'Review Tool Link']
 search = st.text_input('Suche in der Datentabelle')
 
 # Prepare the DataFrame with styling
@@ -397,10 +397,17 @@ styled_df = filtered_df[columns_to_display].sort_values('Impact Score').style.ap
               for val in x],
     subset=['Severity']
 ).apply(
-    lambda x: ['color: white' if val in ['Kritisch', 'Schwerwiegend'] else
+    lambda x: ['background-color: #f44336' if val == 'Violated High' else
+              'background-color: #ff9800' if val == 'Violated Low' else
+              'background-color: #4CAF50' if val == 'Adhered High' else
+              'background-color: #2196F3' if val == 'Adhered Low' else ''
+              for val in x],
+    subset=['Judgement']
+).apply(
+    lambda x: ['color: white' if val in ['Kritisch', 'Schwerwiegend', 'Violated High', 'Violated Low', 'Adhered High', 'Adhered Low'] else
               'color: black' if val == 'Moderat' else ''
               for val in x],
-    subset=['Severity']
+    subset=['Severity', 'Judgement']
 ).format({'Review Tool Link': make_clickable})
 
 st.write(
