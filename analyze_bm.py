@@ -217,45 +217,41 @@ def create_and_display_graph(graph_spec, df):
             key, value = line.split(':', 1)
             graph_config[key.strip().lower()] = value.strip()
     
+    # Filter data based on graph requirements
+    plot_df = df.copy()
+    if "kritisch" in graph_config.get('title', '').lower():
+        plot_df = df[df['Severity'] == 'Kritisch']
+    
     # Create graph based on type
     if graph_config.get('type') == 'bar':
         fig = px.bar(
-            df,
+            plot_df,  # Use filtered dataframe
             x=graph_config.get('x'),
             y=graph_config.get('y'),
             title=graph_config.get('title'),
             color=graph_config.get('color') if 'color' in graph_config else None,
             color_discrete_sequence=['#d32f2f']
         )
-    elif graph_config.get('type') == 'scatter':
-        fig = px.scatter(
-            df,
-            x=graph_config.get('x'),
-            y=graph_config.get('y'),
-            title=graph_config.get('title'),
-            color=graph_config.get('color') if 'color' in graph_config else None
+        
+        # Add value labels inside bars
+        fig.update_traces(
+            texttemplate='%{value}',
+            textposition='inside',
+            textfont=dict(color='white')
         )
-    elif graph_config.get('type') == 'pie':
-        fig = px.pie(
-            df,
-            values=graph_config.get('y'),
-            names=graph_config.get('x'),
-            title=graph_config.get('title')
-        )
-    else:
-        return
     
+    # ... rest of the function remains the same ...
+
     # Update layout
     fig.update_layout(
         height=400,
-        showlegend=True if graph_config.get('type') == 'pie' else False
+        showlegend=True if graph_config.get('type') == 'pie' else False,
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='white')
     )
     
-    # Add to session state for display
-    if 'generated_graphs' not in st.session_state:
-        st.session_state.generated_graphs = []
-    
-    st.session_state.generated_graphs.append(fig)
+    return fig
 
 with chat_col1:
     user_input = st.text_input("Stelle eine Frage zu den Daten:", key="user_input")
