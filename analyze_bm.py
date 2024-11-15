@@ -402,7 +402,8 @@ styled_df = filtered_df[columns_to_display].sort_values('Impact Score').style.ap
     lambda x: ['background-color: #f44336' if val == 'Violated High' else
               'background-color: #ff9800' if val == 'Violated Low' else
               'background-color: #4CAF50' if val == 'Adhered High' else
-              'background-color: #2196F3' if val == 'Adhered Low' else ''
+              'background-color: #2196F3' if val == 'Adhered Low' else
+              'background-color: #666666' if val == 'Not applicable' else ''
               for val in x],
     subset=['Judgement']
 ).format({'Review Tool Link': make_clickable})
