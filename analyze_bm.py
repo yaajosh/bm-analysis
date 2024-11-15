@@ -410,8 +410,12 @@ with graph_col1:
     st.plotly_chart(fig_platform, use_container_width=True)
 
 with graph_col2:
-    # Extract main categories from topics
-    df['Main Topic'] = df['Topic'].apply(lambda x: x.split(' > ')[0].strip())
+    # Extract middle category from topics (between first and second ">")
+    def get_middle_category(topic_string):
+        parts = topic_string.split(' > ')
+        return parts[1] if len(parts) > 2 else parts[0]
+    
+    df['Main Topic'] = df['Topic'].apply(get_middle_category)
     all_main_topics = sorted(df['Main Topic'].unique().tolist())
     
     selected_topics = st.multiselect(
