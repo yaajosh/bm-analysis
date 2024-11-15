@@ -299,9 +299,10 @@ st.subheader("🤖 KI-Analyse der Daten")
 
 # Calculate key metrics
 total_issues = len(df)
-critical_issues = len(df[df['Severity'] == 'Kritisch'])
-severe_issues = len(df[df['Severity'] == 'Schwerwiegend'])
-moderate_issues = len(df[df['Severity'] == 'Moderat'])
+violated_high = len(df[df['Judgement'] == 'Violated High'])
+violated_low = len(df[df['Judgement'] == 'Violated Low'])
+adhered_high = len(df[df['Judgement'] == 'Adhered High'])
+adhered_low = len(df[df['Judgement'] == 'Adhered Low'])
 
 # Platform analysis
 platform_severity = df.groupby(['Platform', 'Severity']).size().unstack(fill_value=0)
@@ -313,31 +314,39 @@ most_critical_topic = topic_impact.index[0]
 topic_count = len(df[df['Topic'] == most_critical_topic])
 
 # Create three columns for key metrics
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.markdown("""
         <div class="stat-card">
             <h2 style="color: #f44336">{}</h2>
-            <p>Kritische Issues</p>
+            <p>Violated High</p>
         </div>
-    """.format(critical_issues), unsafe_allow_html=True)
+    """.format(violated_high), unsafe_allow_html=True)
 
 with col2:
     st.markdown("""
         <div class="stat-card">
             <h2 style="color: #ff9800">{}</h2>
-            <p>Schwerwiegende Issues</p>
+            <p>Violated Low</p>
         </div>
-    """.format(severe_issues), unsafe_allow_html=True)
+    """.format(violated_low), unsafe_allow_html=True)
 
 with col3:
     st.markdown("""
         <div class="stat-card">
-            <h2 style="color: #ffc107">{}</h2>
-            <p>Moderate Issues</p>
+            <h2 style="color: #4CAF50">{}</h2>
+            <p>Adhered High</p>
         </div>
-    """.format(moderate_issues), unsafe_allow_html=True)
+    """.format(adhered_high), unsafe_allow_html=True)
+
+with col4:
+    st.markdown("""
+        <div class="stat-card">
+            <h2 style="color: #2196F3">{}</h2>
+            <p>Adhered Low</p>
+        </div>
+    """.format(adhered_low), unsafe_allow_html=True)
 
 # Detailed Analysis Box
 st.markdown("""
@@ -353,7 +362,7 @@ st.markdown("""
     </div>
 """.format(
     total_issues,
-    ((critical_issues + severe_issues) / total_issues) * 100,
+    ((violated_high + violated_low + adhered_high + adhered_low) / total_issues) * 100,
     worst_platform,
     most_critical_topic,
     topic_count,
