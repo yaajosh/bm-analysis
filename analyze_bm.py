@@ -552,3 +552,60 @@ with impact_col2:
         showlegend=False
     )
     st.plotly_chart(fig_box, use_container_width=True) 
+
+# Mental Model Section
+st.markdown("---")
+st.subheader("🧠 Mentales Modell der UX-Analyse")
+
+# Create mental model using mermaid
+mental_model = """
+graph TD
+    classDef violated fill:#f44336,color:white;
+    classDef violatedLow fill:#ff9800,color:white;
+    classDef adheredLow fill:#2196F3,color:white;
+    classDef adheredHigh fill:#4CAF50,color:white;
+    
+    A[UX Issues] --> B[Platform]
+    A --> C[Kategorien]
+    A --> D[Bewertung]
+    
+    B --> B1[Desktop]
+    B --> B2[Mobile Web]
+    
+    C --> C1[Homepage & Navigation]
+    C --> C2[Suche]
+    C --> C3[Produkt-Seiten]
+    C --> C4[User Reviews]
+    
+    D --> E[Judgement]
+    D --> F[Impact]
+    
+    E --> E1[Violated High]:::violated
+    E --> E2[Violated Low]:::violatedLow
+    E --> E3[Adhered Low]:::adheredLow
+    E --> E4[Adhered High]:::adheredHigh
+    
+    F --> F1[Kritisch < -3]
+    F --> F2[Schwerwiegend < -2]
+    F --> F3[Moderat > -2]
+"""
+
+# Using streamlit-mermaid to render the diagram
+st.markdown(f"""
+    ```mermaid
+    {mental_model}
+    ```
+""")
+
+# Add explanation
+st.markdown("""
+    <div class="summary-box">
+        <h4>Erklärung des Modells:</h4>
+        <ul>
+            <li>🔍 <strong>Platform:</strong> Desktop und Mobile Web als Hauptplattformen</li>
+            <li>📑 <strong>Kategorien:</strong> Hauptbereiche der UX-Analyse</li>
+            <li>⚖️ <strong>Judgement:</strong> Bewertung der Umsetzung von UX-Prinzipien</li>
+            <li>📊 <strong>Impact:</strong> Auswirkung auf die Benutzerfreundlichkeit</li>
+        </ul>
+    </div>
+""", unsafe_allow_html=True) 
