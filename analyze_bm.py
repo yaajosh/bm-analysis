@@ -151,43 +151,42 @@ chat_col1, chat_col2 = st.columns([3, 1])
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def get_ai_response(user_input, df):
-    # Prepare context from dataframe
+    # Prepare detailed data summary
     data_summary = f"""
-    Daten:
-    {df.to_string()}
+    Datenanalyse:
+    - Gesamtanzahl Issues: {len(df)}
+    - Issues nach Platform:
+      - Desktop: {len(df[df['Platform'] == 'Desktop'])}
+      - Mobile Web: {len(df[df['Platform'] == 'Mobile Web'])}
     
-    Verfügbare Spalten:
-    {', '.join(df.columns.tolist())}
+    - Severity Verteilung:
+      - Kritisch: {len(df[df['Severity'] == 'Kritisch'])}
+      - Schwerwiegend: {len(df[df['Severity'] == 'Schwerwiegend'])}
+      - Moderat: {len(df[df['Severity'] == 'Moderat'])}
+    
+    - Impact Score Analyse:
+      - Durchschnittlicher Impact Score: {df['Impact Score'].mean():.2f}
+      - Niedrigster Impact Score: {df['Impact Score'].min():.2f}
+      - Höchster Impact Score: {df['Impact Score'].max():.2f}
+    
+    - Top Topics:
+    {df['Topic'].value_counts().head().to_string()}
     """
     
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4-mini",
             messages=[
                 {"role": "system", "content": f"""Du bist ein präziser Analyst für UX/UI Issues.
-                Du kannst auch Graphen erstellen. Wenn der User nach einem Graphen fragt,
-                antworte EXAKT in diesem Format:
                 
-                GRAPH:
-                type: bar
-                data: [Beschreibung der benötigten Daten]
-                x: Platform
-                y: value
-                title: [Titel - Verwende diese Schlüsselwörter:
-                       - "Kritisch" für kritische Issues
-                       - "Violated" für Issues mit Impact Score <= -2]
+                Wichtige Regeln für deine Antworten:
+                - Maximal 3 Stichpunkte
+                - Jeder Stichpunkt maximal 1 Zeile
+                - Nur konkrete Zahlen und Fakten aus den Daten
+                - Keine Erklärungen oder Interpretationen
+                - Antworte auf Deutsch
+                - Verwende Aufzählungszeichen (•)
                 
-                WICHTIG: 
-                - Verwende IMMER 'value' als y-Wert für Anzahlen
-                - Verwende IMMER 'Platform' als x-Wert
-                - Sei präzise mit den Schlüsselwörtern im Titel
-                
-                Aktuelle Daten:
-                - Anzahl Issues gesamt: {len(df)}
-                - Anzahl kritische Issues: {len(df[df['Severity'] == 'Kritisch'])}
-                - Anzahl violated Issues: {len(df[df['Impact Score'] <= -2])}
-                
-                Verfügbare Daten:
                 {data_summary}"""},
                 {"role": "user", "content": user_input}
             ],
@@ -195,84 +194,10 @@ def get_ai_response(user_input, df):
             max_tokens=150
         )
         
-        ai_response = response.choices[0].message.content
-        
-        # Check if response contains graph request
-        if "GRAPH:" in ai_response:
-            fig = create_and_display_graph(ai_response, df)
-            if fig:
-                if 'generated_graphs' not in st.session_state:
-                    st.session_state.generated_graphs = []
-                st.session_state.generated_graphs.append(fig)
-                return "Graph wurde erstellt! 📊"
-            return "Fehler bei der Graph-Erstellung. Bitte versuchen Sie es erneut."
-        
-        return ai_response
+        return response.choices[0].message.content
         
     except Exception as e:
         return f"Fehler: {str(e)}"
-
-def create_and_display_graph(graph_spec, df):
-    # Parse graph specification
-    lines = graph_spec.split('\n')
-    graph_config = {}
-    for line in lines:
-        if ':' in line:
-            key, value = line.split(':', 1)
-            graph_config[key.strip().lower()] = value.strip()
-    
-    # Filter data based on graph requirements
-    plot_df = df.copy()
-    
-    # Filter for violated (high and low) if specified in title
-    if "violated" in graph_config.get('title', '').lower():
-        plot_df = plot_df[plot_df['Impact Score'] <= -2]  # Assuming Impact Score <= -2 means violated
-    
-    # Filter for critical issues if specified
-    elif "kritisch" in graph_config.get('title', '').lower():
-        plot_df = plot_df[plot_df['Severity'] == 'Kritisch']
-    
-    # Count values
-    if graph_config.get('y') == 'value':
-        # Group by x-axis column and count
-        counts = plot_df.groupby(graph_config.get('x')).size().reset_index(name='value')
-        plot_df = counts
-        y_column = 'value'
-    else:
-        y_column = graph_config.get('y')
-    
-    # Create graph
-    if graph_config.get('type') == 'bar':
-        fig = px.bar(
-            plot_df,
-            x=graph_config.get('x'),
-            y=y_column,
-            title=graph_config.get('title'),
-            color_discrete_sequence=['#d32f2f']
-        )
-        
-        # Add value labels inside bars
-        fig.update_traces(
-            texttemplate='%{value}',
-            textposition='inside',
-            textfont=dict(color='white')
-        )
-    
-        # Update layout
-        fig.update_layout(
-            height=400,
-            showlegend=False,
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='white'),
-            yaxis=dict(
-                range=[0, max(plot_df[y_column]) * 1.1]  # Add 10% padding to y-axis
-            )
-        )
-        
-        return fig
-    
-    return None
 
 with chat_col1:
     user_input = st.text_input("Stelle eine Frage zu den Daten:", key="user_input")
