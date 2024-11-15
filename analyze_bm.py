@@ -175,7 +175,7 @@ def get_ai_response(user_input, df):
     
     try:
         response = client.chat.completions.create(
-            model="gpt-4-mini",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": f"""Du bist ein präziser Analyst für UX/UI Issues.
                 
