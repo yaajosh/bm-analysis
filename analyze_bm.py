@@ -151,26 +151,37 @@ chat_col1, chat_col2 = st.columns([3, 1])
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def get_ai_response(user_input, df):
-    # Prepare detailed data summary
-    data_summary = f"""
-    Datenanalyse:
-    - Gesamtanzahl Issues: {len(df)}
-    - Issues nach Platform:
-      - Desktop: {len(df[df['Platform'] == 'Desktop'])}
-      - Mobile Web: {len(df[df['Platform'] == 'Mobile Web'])}
+    # Convert DataFrame to a more readable format
+    data_details = ""
     
-    - Severity Verteilung:
-      - Kritisch: {len(df[df['Severity'] == 'Kritisch'])}
-      - Schwerwiegend: {len(df[df['Severity'] == 'Schwerwiegend'])}
-      - Moderat: {len(df[df['Severity'] == 'Moderat'])}
+    # General statistics
+    data_details += f"""
+    DATENÜBERSICHT:
+    Gesamtanzahl Einträge: {len(df)}
+    Spalten: {', '.join(df.columns.tolist())}
     
-    - Impact Score Analyse:
-      - Durchschnittlicher Impact Score: {df['Impact Score'].mean():.2f}
-      - Niedrigster Impact Score: {df['Impact Score'].min():.2f}
-      - Höchster Impact Score: {df['Impact Score'].max():.2f}
+    DETAILLIERTE DATEN:
+    {df.to_string()}
     
-    - Top Topics:
-    {df['Topic'].value_counts().head().to_string()}
+    ZUSAMMENFASSENDE STATISTIKEN:
+    
+    1. Platform Verteilung:
+    {df['Platform'].value_counts().to_string()}
+    
+    2. Severity Verteilung:
+    {df['Severity'].value_counts().to_string()}
+    
+    3. Topics:
+    {df['Topic'].value_counts().to_string()}
+    
+    4. Impact Score Statistiken:
+    - Min: {df['Impact Score'].min()}
+    - Max: {df['Impact Score'].max()}
+    - Durchschnitt: {df['Impact Score'].mean():.2f}
+    - Median: {df['Impact Score'].median()}
+    
+    5. Judgement Verteilung:
+    {df['Judgement'].value_counts().to_string()}
     """
     
     try:
@@ -178,6 +189,22 @@ def get_ai_response(user_input, df):
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": f"""Du bist ein präziser Analyst für UX/UI Issues.
+                Du hast Zugriff auf die komplette CSV-Datei und alle ihre Daten.
+                
+                Die CSV enthält folgende Spalten:
+                - Code: Eindeutige ID des Issues
+                - Title: Beschreibung des Problems
+                - Platform: Desktop oder Mobile Web
+                - Is Low Cost: Ob das Problem günstig zu beheben ist
+                - Is Missed Opportunity: Ob es eine verpasste Chance darstellt
+                - Judgement: Bewertung des Issues
+                - Impact: Auswirkung des Problems
+                - Impact Score: Numerische Bewertung (negativ = schlecht)
+                - Notes: Zusätzliche Anmerkungen
+                - Topic: Themenbereich des Problems
+                - Review Tool Link: Link zum Review-Tool
+                - Selected scenarios: Betroffene Szenarien
+                - Severity: Schweregrad (Kritisch/Schwerwiegend/Moderat)
                 
                 Wichtige Regeln für deine Antworten:
                 - Maximal 3 Stichpunkte
@@ -187,7 +214,7 @@ def get_ai_response(user_input, df):
                 - Antworte auf Deutsch
                 - Verwende Aufzählungszeichen (•)
                 
-                {data_summary}"""},
+                {data_details}"""},
                 {"role": "user", "content": user_input}
             ],
             temperature=0.3,
