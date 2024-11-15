@@ -501,3 +501,54 @@ st.write(
     styled_df.to_html(escape=False),
     unsafe_allow_html=True
 ) 
+
+# Add Impact Score Analysis Graph
+st.subheader("📊 Impact Score Analyse nach Hauptkategorien")
+
+# Create Impact Score graph
+impact_col1, impact_col2 = st.columns(2)
+
+with impact_col1:
+    # Calculate average impact score per main topic
+    impact_by_topic = df.groupby('Main Topic')['Impact Score'].agg(['mean', 'count']).reset_index()
+    impact_by_topic = impact_by_topic[impact_by_topic['Main Topic'].isin(selected_topics)]
+    impact_by_topic = impact_by_topic.sort_values('mean')  # Sort by impact score
+    
+    fig_impact = px.bar(
+        impact_by_topic,
+        x='Main Topic',
+        y='mean',
+        title='Durchschnittlicher Impact Score nach Hauptkategorien',
+        color='mean',
+        color_continuous_scale=['#f44336', '#ff9800', '#ffc107', '#4CAF50'],
+        text=impact_by_topic['mean'].round(2)  # Show values on bars
+    )
+    fig_impact.update_traces(textposition='outside')
+    fig_impact.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font_color='white',
+        xaxis_tickangle=-45,
+        coloraxis_showscale=False,  # Hide color scale
+        showlegend=False
+    )
+    st.plotly_chart(fig_impact, use_container_width=True)
+
+with impact_col2:
+    # Box plot to show distribution
+    fig_box = px.box(
+        df[df['Main Topic'].isin(selected_topics)],
+        x='Main Topic',
+        y='Impact Score',
+        title='Impact Score Verteilung nach Hauptkategorien',
+        color='Main Topic',
+        points='all'  # Show all points
+    )
+    fig_box.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font_color='white',
+        xaxis_tickangle=-45,
+        showlegend=False
+    )
+    st.plotly_chart(fig_box, use_container_width=True) 
