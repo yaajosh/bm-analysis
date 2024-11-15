@@ -377,12 +377,14 @@ st.subheader("Detaillierte Datenansicht")
 columns_to_display = ['Title', 'Platform', 'Topic', 'Severity', 'Judgement', 'Impact Score', 'Review Tool Link']
 search = st.text_input('Suche in der Datentabelle')
 
-# Prepare the DataFrame with styling
+# Filter out "Not Yet Rated" entries and apply search
 if search:
-    filtered_df = df[df['Title'].str.contains(search, case=False) | 
-                    df['Topic'].str.contains(search, case=False)]
+    filtered_df = df[
+        (df['Title'].str.contains(search, case=False) | df['Topic'].str.contains(search, case=False)) &
+        (df['Judgement'] != 'Not Yet Rated')
+    ]
 else:
-    filtered_df = df
+    filtered_df = df[df['Judgement'] != 'Not Yet Rated']
 
 # Create a styled dataframe with clickable links
 def make_clickable(link):
@@ -403,11 +405,6 @@ styled_df = filtered_df[columns_to_display].sort_values('Impact Score').style.ap
               'background-color: #2196F3' if val == 'Adhered Low' else ''
               for val in x],
     subset=['Judgement']
-).apply(
-    lambda x: ['color: white' if val in ['Kritisch', 'Schwerwiegend', 'Violated High', 'Violated Low', 'Adhered High', 'Adhered Low'] else
-              'color: black' if val == 'Moderat' else ''
-              for val in x],
-    subset=['Severity', 'Judgement']
 ).format({'Review Tool Link': make_clickable})
 
 st.write(
