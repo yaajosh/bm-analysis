@@ -173,12 +173,19 @@ def get_ai_response(user_input, df):
                 data: [Beschreibung der benötigten Daten]
                 x: Platform
                 y: value
-                title: [Titel - WICHTIG: Bei kritischen Issues "Kritisch" im Titel erwähnen]
+                title: [Titel - Verwende diese Schlüsselwörter:
+                       - "Kritisch" für kritische Issues
+                       - "Violated" für Issues mit Impact Score <= -2]
                 
                 WICHTIG: 
                 - Verwende IMMER 'value' als y-Wert für Anzahlen
                 - Verwende IMMER 'Platform' als x-Wert
-                - Bei kritischen Issues: Erwähne "Kritisch" im Titel
+                - Sei präzise mit den Schlüsselwörtern im Titel
+                
+                Aktuelle Daten:
+                - Anzahl Issues gesamt: {len(df)}
+                - Anzahl kritische Issues: {len(df[df['Severity'] == 'Kritisch'])}
+                - Anzahl violated Issues: {len(df[df['Impact Score'] <= -2])}
                 
                 Verfügbare Daten:
                 {data_summary}"""},
@@ -216,10 +223,16 @@ def create_and_display_graph(graph_spec, df):
     
     # Filter data based on graph requirements
     plot_df = df.copy()
-    if "kritisch" in graph_config.get('title', '').lower():
-        plot_df = df[df['Severity'] == 'Kritisch']
     
-    # Count values if needed
+    # Filter for violated (high and low) if specified in title
+    if "violated" in graph_config.get('title', '').lower():
+        plot_df = plot_df[plot_df['Impact Score'] <= -2]  # Assuming Impact Score <= -2 means violated
+    
+    # Filter for critical issues if specified
+    elif "kritisch" in graph_config.get('title', '').lower():
+        plot_df = plot_df[plot_df['Severity'] == 'Kritisch']
+    
+    # Count values
     if graph_config.get('y') == 'value':
         # Group by x-axis column and count
         counts = plot_df.groupby(graph_config.get('x')).size().reset_index(name='value')
@@ -228,14 +241,13 @@ def create_and_display_graph(graph_spec, df):
     else:
         y_column = graph_config.get('y')
     
-    # Create graph based on type
+    # Create graph
     if graph_config.get('type') == 'bar':
         fig = px.bar(
             plot_df,
             x=graph_config.get('x'),
             y=y_column,
             title=graph_config.get('title'),
-            color=graph_config.get('color') if 'color' in graph_config else None,
             color_discrete_sequence=['#d32f2f']
         )
         
@@ -252,7 +264,10 @@ def create_and_display_graph(graph_spec, df):
             showlegend=False,
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='white')
+            font=dict(color='white'),
+            yaxis=dict(
+                range=[0, max(plot_df[y_column]) * 1.1]  # Add 10% padding to y-axis
+            )
         )
         
         return fig
