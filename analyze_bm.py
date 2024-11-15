@@ -166,30 +166,21 @@ def get_ai_response(user_input, df):
             messages=[
                 {"role": "system", "content": f"""Du bist ein präziser Analyst für UX/UI Issues.
                 Du kannst auch Graphen erstellen. Wenn der User nach einem Graphen fragt,
-                antworte im folgenden Format:
+                antworte EXAKT in diesem Format:
                 
                 GRAPH:
-                type: [bar/line/scatter/pie]
+                type: bar
                 data: [Beschreibung der benötigten Daten]
-                x: [x-Achse - MUSS exakt einem dieser Spaltennamen entsprechen: {', '.join(df.columns.tolist())}]
-                y: [y-Achse - MUSS exakt einem dieser Spaltennamen entsprechen: {', '.join(df.columns.tolist())}]
-                title: [Titel]
-                color: [optional: MUSS exakt einem dieser Spaltennamen entsprechen: {', '.join(df.columns.tolist())}]
+                x: Platform
+                y: value
+                title: [Titel - WICHTIG: Bei kritischen Issues "Kritisch" im Titel erwähnen]
                 
-                WICHTIG: Verwende exakt die englischen Spaltennamen aus den Daten:
-                - Platform (nicht Plattform)
-                - Topic (nicht Thema)
-                - Severity (nicht Schweregrad)
-                - Impact Score (nicht Impact)
+                WICHTIG: 
+                - Verwende IMMER 'value' als y-Wert für Anzahlen
+                - Verwende IMMER 'Platform' als x-Wert
+                - Bei kritischen Issues: Erwähne "Kritisch" im Titel
                 
-                Wichtige Regeln für normale Antworten:
-                - Maximal 3 Stichpunkte
-                - Jeder Stichpunkt maximal 1 Zeile
-                - Nur konkrete Zahlen und Fakten aus den Daten
-                - Keine Erklärungen oder Interpretationen
-                - Antworte auf Deutsch
-                - Verwende Aufzählungszeichen (•)
-                
+                Verfügbare Daten:
                 {data_summary}"""},
                 {"role": "user", "content": user_input}
             ],
@@ -201,10 +192,16 @@ def get_ai_response(user_input, df):
         
         # Check if response contains graph request
         if "GRAPH:" in ai_response:
-            create_and_display_graph(ai_response, df)
-            return "Graph wurde erstellt! 📊"
+            fig = create_and_display_graph(ai_response, df)
+            if fig:
+                if 'generated_graphs' not in st.session_state:
+                    st.session_state.generated_graphs = []
+                st.session_state.generated_graphs.append(fig)
+                return "Graph wurde erstellt! 📊"
+            return "Fehler bei der Graph-Erstellung. Bitte versuchen Sie es erneut."
         
         return ai_response
+        
     except Exception as e:
         return f"Fehler: {str(e)}"
 
@@ -222,12 +219,21 @@ def create_and_display_graph(graph_spec, df):
     if "kritisch" in graph_config.get('title', '').lower():
         plot_df = df[df['Severity'] == 'Kritisch']
     
+    # Count values if needed
+    if graph_config.get('y') == 'value':
+        # Group by x-axis column and count
+        counts = plot_df.groupby(graph_config.get('x')).size().reset_index(name='value')
+        plot_df = counts
+        y_column = 'value'
+    else:
+        y_column = graph_config.get('y')
+    
     # Create graph based on type
     if graph_config.get('type') == 'bar':
         fig = px.bar(
-            plot_df,  # Use filtered dataframe
+            plot_df,
             x=graph_config.get('x'),
-            y=graph_config.get('y'),
+            y=y_column,
             title=graph_config.get('title'),
             color=graph_config.get('color') if 'color' in graph_config else None,
             color_discrete_sequence=['#d32f2f']
@@ -240,18 +246,18 @@ def create_and_display_graph(graph_spec, df):
             textfont=dict(color='white')
         )
     
-    # ... rest of the function remains the same ...
-
-    # Update layout
-    fig.update_layout(
-        height=400,
-        showlegend=True if graph_config.get('type') == 'pie' else False,
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(color='white')
-    )
+        # Update layout
+        fig.update_layout(
+            height=400,
+            showlegend=False,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='white')
+        )
+        
+        return fig
     
-    return fig
+    return None
 
 with chat_col1:
     user_input = st.text_input("Stelle eine Frage zu den Daten:", key="user_input")
