@@ -115,7 +115,7 @@ st.markdown("""
 # Daten einlesen
 @st.cache_data
 def load_data():
-    return pd.read_csv('ux_data.csv')
+    return pd.read_csv('UX_data_update.csv')
 
 df = load_data()
 
