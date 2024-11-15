@@ -295,7 +295,7 @@ if 'generated_graphs' in st.session_state and st.session_state.generated_graphs:
 st.markdown("---")
 
 # Enhanced AI Analysis Section
-st.subheader("🤖 KI-Analyse der Daten")
+st.subheader("Zusammenfassung der Daten")
 
 # Calculate key metrics
 total_issues = len(df)
@@ -369,6 +369,66 @@ st.markdown("""
     df['Impact Score'].mean()
 ), unsafe_allow_html=True)
 
+# Add Judgement Analysis Graphs
+st.subheader("📊 Judgement Analyse nach Platform und Topic")
+
+# Create two columns for the graphs
+graph_col1, graph_col2 = st.columns(2)
+
+with graph_col1:
+    # Platform Analysis
+    platform_judgement = df.groupby(['Platform', 'Judgement']).size().reset_index(name='count')
+    fig_platform = px.bar(
+        platform_judgement,
+        x='Platform',
+        y='count',
+        color='Judgement',
+        title='Judgement Verteilung nach Platform',
+        color_discrete_map={
+            'Violated High': '#f44336',
+            'Violated Low': '#ff9800',
+            'Adhered High': '#4CAF50',
+            'Adhered Low': '#2196F3',
+            'Not applicable': '#666666'
+        },
+        barmode='group'
+    )
+    fig_platform.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font_color='white'
+    )
+    st.plotly_chart(fig_platform, use_container_width=True)
+
+with graph_col2:
+    # Topic Analysis (top 5 topics)
+    topic_judgement = df.groupby(['Topic', 'Judgement']).size().reset_index(name='count')
+    top_topics = df['Topic'].value_counts().nlargest(5).index
+    topic_judgement = topic_judgement[topic_judgement['Topic'].isin(top_topics)]
+    
+    fig_topic = px.bar(
+        topic_judgement,
+        x='Topic',
+        y='count',
+        color='Judgement',
+        title='Judgement Verteilung nach Top 5 Topics',
+        color_discrete_map={
+            'Violated High': '#f44336',
+            'Violated Low': '#ff9800',
+            'Adhered High': '#4CAF50',
+            'Adhered Low': '#2196F3',
+            'Not applicable': '#666666'
+        },
+        barmode='group'
+    )
+    fig_topic.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font_color='white',
+        xaxis_tickangle=-45
+    )
+    st.plotly_chart(fig_topic, use_container_width=True)
+    
 # Improved Data Analysis Section
 st.subheader("📊 Datenanalyse")
 
