@@ -410,19 +410,21 @@ with graph_col1:
     st.plotly_chart(fig_platform, use_container_width=True)
 
 with graph_col2:
-    # Add topic selection
-    all_topics = sorted(df['Topic'].unique().tolist())
+    # Extract main categories from topics
+    df['Main Topic'] = df['Topic'].apply(lambda x: x.split(' > ')[0].strip())
+    all_main_topics = sorted(df['Main Topic'].unique().tolist())
+    
     selected_topics = st.multiselect(
-        'Wähle die Topics aus:',
-        options=all_topics,
-        default=df['Topic'].value_counts().nlargest(5).index.tolist(),
+        'Wähle die Hauptkategorien aus:',
+        options=all_main_topics,
+        default=all_main_topics,
         key='topic_selector'
     )
     
-    # Update topic analysis with selected topics
-    topic_judgement = df.groupby(['Topic', 'Judgement']).size().reset_index(name='count')
+    # Update topic analysis with selected main topics
+    topic_judgement = df.groupby(['Main Topic', 'Judgement']).size().reset_index(name='count')
     topic_judgement = topic_judgement[topic_judgement['Judgement'] != 'Not applicable']
-    topic_judgement = topic_judgement[topic_judgement['Topic'].isin(selected_topics)]
+    topic_judgement = topic_judgement[topic_judgement['Main Topic'].isin(selected_topics)]
     topic_judgement['Judgement'] = pd.Categorical(
         topic_judgement['Judgement'], 
         categories=judgement_order, 
@@ -431,10 +433,10 @@ with graph_col2:
     
     fig_topic = px.bar(
         topic_judgement,
-        x='Topic',
+        x='Main Topic',
         y='count',
         color='Judgement',
-        title='Judgement Verteilung nach ausgewählten Topics',
+        title='Judgement Verteilung nach Hauptkategorien',
         color_discrete_map={
             'Violated High': '#f44336',
             'Violated Low': '#ff9800',
